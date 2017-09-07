@@ -1,0 +1,448 @@
+---
+title: "Modeling and prediction for movies"
+output:
+  html_document:
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+  pdf_document: default
+  word_document: default
+---
+
+## Setup
+The below project is a R markdown (.RMD) file. It contains html tags at some places to render it on the html page.
+
+### Load packages
+Load the necessary R packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+```
+
+### Load data
+
+
+Load the Data
+
+```{r load-data}
+load("movies.Rdata")
+```
+
+
+
+* * *
+
+## Part 1: Data
+First we test if the given sample of data has been collected randomly or not. As per the lecture contents, the biased data (or data in which the explanatory variables are collinear), may yield incorrect inferences. Hence, It is very important to come to a conclusion that the dataset is random.<Br>
+Below are few plots(Cases) to check if the dataset is random or not.<Br>
+
+<H1>Test of Randomness:</H1><Br>
+<U><B>Test 1 (best_pic_win Vs imdb_rating):</B></U><Br>
+ggplot of best_pic_win Vs imdb_rating. This is to check the pattern of movies winning oscar as per IMDB rating. The idea is to check if the data is biased or not i.e. if only higher rated movies won oscars or vice versa.<Br>
+<B>Result: </B><Br>
+The plot shows that there are many movie titles, who were rated high(above 8) but did not win Oscars. On other hand, there are few movies(Total 5) who won oscar but out of those, 3 were rated below 8. It strengthens the assumption that the data was collected randomly.
+
+```{r}
+ggplot(data=movies, aes(x = imdb_rating, y = best_pic_win)) +
+  geom_point() +
+  stat_smooth(method = "lm", se = FALSE)
+
+```
+
+
+<U><B>Test 2 (best_pic_win Vs imdb_num_votes):</U></B><Br>
+ggplot of best_pic_win Vs imdb_num_votes further strengthens the assumption that the data has been collected randomly. This plot is to check the pattern of movies winning oscar as per IMDB number of votes.<Br>
+<B>Observations:</B> <Br>
+1. The plot shows that there are total 7 movie titles who won the award. <Br>
+2. Out of those 7, only 2 titles (28.6% of 7) won high number of votes (>750000).<Br>
+3. 3 titles (42.85% of 7) won the award despite receiving fewer votes (<250000).<Br>
+4. 2 titles (28.6% of 7) won the award and received fair amount of votes (>250000 and <750000).<Br>
+
+Aprt from above observations, It is also evident from the plot that there were many titles who received high number of votes but did not win the award.
+Hence, It furher supports the assumption that the data was collected randomly.<Br>
+```{r}
+ggplot(data=movies, aes(x = imdb_num_votes, y = best_pic_win)) +
+  geom_point() +
+  stat_smooth(method = "lm", se = FALSE)
+```
+
+
+
+<B>A few more points obeserved about the data:</B><Br>
+1. Total 651 randomly sampled movie titles with 33 columns (Also called variables).<Br>
+2. 3 Variables (Sl No, imdb_url, rt_url) are useless and do not add to the analysis.<Br>
+3. The movie titles were release between years 1970 - 2014 hence, it covers a good range of 40 years which can help in generalizing the results.<Br>
+4. Only 11 different Genres are selected and hence the scope of the prediction remains within these Genres only. We cannot generalize the results for other Genres.<Br>
+5. Since the sample is taken randomly, hence it can be generalized for the whole US population.<Br>
+6. Causality cannot be Inferred as the data were derived from an observational, not experimental study.<Br>
+
+* * *
+
+## Part 2: Research question
+The aim is to determine how does the type of movie, runtime, awards obtained (actors, director and picture) and critics score relates to the popularity of a movie. The Idea is to predict what factors are more critical make a movie popular.
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+We will be running various statistical methods to analyze the data and to understand it better.
+
+<U><B>Step 1: Statistical summary of the data set.</U></B><Br>
+First step is to find the summary statistics of the data.
+
+```{r}
+summary(movies)
+```
+
+<B>Description of Summary:</B><Br>
+1. Most of the titles (591 of 651) are of Type "Feauture Film". Hence it makes for 90.78% of the whole data set.<Br>
+2. The movie titles in the dataset are divided into 10 main categories and and extra Genre named "other" which includes other Genres.<Br>
+3. It is evident from the summary above that the majority of the movies,305 out of total 651 (46.85% of 651), fall into drama Genre.<Br> 
+4. The smaller Genres like "Musical & Performing Arts" and "Art House & International" have been merged in other genre.<Br>
+5. The movie runtime variable statistics shows that minimum length of movies in the dataset is 39 minutes maximum is 267 minutes while most of movies are of length 103 minutes (Median).<Br>
+6. Most of the movies are rated R.<Br>
+7. As per thtr_rel_year statistics, the earliest movie was in 1970, the latest was in 2014 while most of the movies were release in 2000.
+8. One important variable is imdb_rating and the statistics summary shows that the highest rated title got a rating of 9, the lowest rated title got 1.9 and most of the titles got a rating of 6.6. The average rating is 6.493
+9. Similarly imdb_num_votes: minimum = 180 votes, maximum = 893008 votes, mean = 57533, Median = 15116
+
+<Br>
+<Br>
+
+After summary data statistical analysis, We will now take the data analysis one step further to plotting the summary statistics of movies dataset as per most important variables.
+
+<U><B>Step 2: Plotting the summary bar chart as per different non numerical independent variables.</U></B><Br>
+```{r}
+#layout(matrix(c(1,1,2,3,4,5), 3, 2, byrow = FALSE))
+layout(matrix(c(1,1,2,2,3,3,4,4,5,5,6,6), nrow = 2,ncol=1, byrow = TRUE))
+midpoints <- barplot(summary(movies$genre), main="a) Count of titles as per the Genre of movie",las=1)
+	text(midpoints, 100, labels=summary(movies$genre))
+midpoints <- barplot(summary(movies$best_pic_win),main="b) The movie won a best picture Oscar or not")
+	text(midpoints, 100, labels=summary(movies$best_pic_win))
+midpoints <- barplot(summary(movies$best_actor_win),main="c) Main actors in the movie won an Oscar?")
+	text(midpoints, 200, labels=summary(movies$best_actor_win))
+midpoints <- barplot(summary(movies$best_actress_win),main="d) Main actress in the movie won an Oscar?")
+	text(midpoints, 200, labels=summary(movies$best_actress_win))	
+midpoints <- barplot(summary(movies$best_dir_win),main="e) Director of the movie won an Oscar?")
+	text(midpoints, 200, labels=summary(movies$best_dir_win))	
+
+```
+<Br><U><B>Observations of Bar Plots:</U></B><Br>
+Figure a) gives the count of titles as per their respective genre. It is evident from the summary that the maximum number of movies belong to the Drama genre and "Animation as well"" as "Science Fiction & Fantasy" both genre have 9 titles each.<Br>
+Figure b) above shows the plots of count of movies who won oscars or not. It can be observed from above plots that the 644 (98.9% of 651) movies didn't win an award as depicted in Figure b)<Br>
+Figure c) above shows the plots of count of actors who won oscars or not. 558 (85.7% of 651) actors did not win the award as per Figure c).<Br>
+Figure d) above shows the plots of count of actresses who won oscars or not. 579 (88.9% of 651) actors did not win the award as per Figure d).<Br>
+Figure e) above shows the plots of count of directors who won oscars or not. 608 (93.4% of 651) actors did not win the award as per Figure e). <Br>
+
+<Br>
+<Br>
+
+<U><B>Step 3: Plot the Movies dataset with Numerical independent variables:</U></B><Br>
+In Step 2 above we plotted the summary(count) of Movies as per genre,best_pic_win,best_actor_win,best_actress_win,best_dir_win.<Br>
+All the independent variables were string or boolean.<Br>
+Now we will plot the Movies dataset with the numerical independent variables like runtime,critics_score,audience_score.<Br>
+In the case of the numerical variables we will use histograms and boxplots. <Br>
+
+```{r}
+layout(matrix(c(1,1,2,2,3,3,4,4,5,5,6,6), nrow = 1,ncol=2, byrow = TRUE))
+#layout.show(n = 6)
+boxplot(movies$runtime,horizontal=TRUE,notch = TRUE,col = c("green"),xlab="Runtime",main="a) Boxplot of movies runtime")
+hist(movies$runtime, labels = FALSE, xlab="Runtime",col="green", main="b) Histogram of movies runtime")
+boxplot(movies$critics_score,horizontal=TRUE,notch = TRUE,col = c("yellow"),xlab="Critics score",main="c) Boxplot of critics score")
+hist(movies$critics_score, labels = FALSE, xlab="Critics score",col="yellow",main="d) Histogram of critics score")
+boxplot(movies$audience_score,horizontal=TRUE,notch = TRUE,col = c("purple"),xlab="Audience score",main="e) Boxplot of audience score")
+hist(movies$audience_score, labels = FALSE,col="purple", xlab="Audience score",main="f) Histogram of audience score")
+```
+
+<Br>
+Figure a) shows the box plot distribution of the movies runtimes and gives a pattern of how the runtimes are arranged. It is evient that the average runtime of a movie is around 105. The runtime distribution is slightly right skewed as the size of the right box next to the notch is more than that on the left side. We can also observe that there are some outliers with runtime around and beyond 200 minutes. These are some odd cases that do not fall under the box plot area. <Br>
+Figure b) above is the histogram plot of runtime for movies database and gives a clearer picture of the outliers. Majority of movies fall from 80-140 minutes range while only few are outside. 2 movies fall below 50 minutes mark and 3 movies have runtime greater than or equal to 200 minutes.<Br>
+Figure c) shows the box plot of the critics scores and it is slightly left skewed as the left dumbell size is greater than the right one. The average score lies around 70. No outliers were observed.<Br>
+Figure d) is the histogram plot of count of movies as per the critics score buckets. It is evident that most of the movies fall in the bucket 70-100 toward the end. The distribution is fairly similar between 0-70.<Br>
+Figure e) shows the box plot of the audience scores and it is slightly left skewed as the left dumbell size is greater than the right one. The average score lies around 65. No outliers were observed.<Br>
+Figure f) is the histogram plot of count of movies as per the audience score buckets. It is evident that most of the movies fall in the bucket 60-90.<Br>
+
+* * *
+
+## Part 4: Modeling
+
+<Br>
+
+Since there are NA in the dataset (Sl no 334, Title = "The End of America"), we will first try to shorten the dataset so that we will not have any Issue while modelling (Having NAs will be an Issue while plotting the Residuals with one of the Independent variables as the model ignores the NAs):<Br>
+We will take only columns that we are interested in and complete the cases to let R know that we have missing values:<Br>
+```{r}
+movie<-movies[complete.cases(movies[,c(3,4,16,18,20,21,22,23)]),c(3,4,16,18,20,21,22,23)]
+```
+
+The above command should result in a data frame called movies with 650 Observations and 8 variables (Please look into environment tab in the right hand side window).<Br>
+
+
+Before beginning the modelling, it makes more sense to unserstand our dependent and independent variables. <Br>
+We have total 8 variables to start with our multiple linear model. We will use the beckward elimination method of linear regression as described in the tutorial lectures.<Br>
+Out of total 8 variables available, 5 are non numerical(genre, best_pic_win, best_actor_win, best_actress_win, best_dir_win) and 3 are numerical (runtime, critics_score, audience_score).<Br>
+<Br>
+<B>The reason for dropping all other variables except above 8</B><Br>
+The reason for excluding all other variables except above 8 is to fix the scope of this assignment by taking only the most interesting variables that affect a movie's popularity into consideration. Rest of the variables include movie release year, month, date, name of movies, name of actor and director etc. These factors do not seem to affect anything related to the popularity of a movie and hence these were dropped.
+<Br>
+<Br>
+<B>Choice of model selection method</B><Br>
+We will be using adjusted R-squared method to choose the right fit model. The reason for selecting this method is because adjusted R squared increases only if the new term improves the model more than would be expected by chance. It decreases when a predictor improves the model by less than expected by chance. Hence, it predicts the model accurately.<Br>
+<Br>
+
+audience_score is our dependent variable as we want to predict the popularity of a movie. We will treat rest 7 variables as our independent variables. The simple way to understand above two types of variables is that the dependent variable will be plotted on Y axis against all independent variables on the X axis. <Br>
+Backward elimination method: This method allows us to start our modelling with all independent variables at once, and we can keep on deleting one independednt variable at a time until there are no improvements in the model. The improvements in the model can be calculated by adjusted R squared and P values.<Br>
+
+<Br>
+<U><B>Step 1: Build Initial model and find out the summary:</U></B><Br>
+First, let's fit an initial model with all 8 variables. The formula is going to be lm(audience_score~genre+runtime+critics_score+best_pic_win+best_actor_win+best_actress_win+best_dir_win,data=movies)<Br>
+
+```{r}
+liner_model1<-lm(audience_score~genre+runtime+critics_score+best_pic_win+best_actor_win+best_actress_win+best_dir_win,data=movie)
+summary(liner_model1)
+```
+
+<B>Observations:</B><Br>
+1. The adjusted R-squared is 0.5223 <Br>
+2. From the Pr(>|t|) column it is evident that the variable best_dir_win is the highest (0.863215) and hence we can assume that this is the least significant variable in our linear model and hence we will exclude this variable for the next model.<Br>
+3. The median of the residuals is 0.315<Br>
+4. Looks like critics_score is the most significant variable due to its lowest value.<Br>
+5. As usual, the Intercept does not mean anything for the analysis. It is just a point at which our linear model is supposed to cut y axis.<Br>
+6. One important point to observe here is that even if the Genre Comedy has a high Pr(>|t|) value, we cannot ignore Genre variable as a whole as it has other components with low Pr(>|t|) value (e.g. genreDocumentary) which may compensate for the overall Pr(>|t|) value of the Genre Independent variable.<Br>
+
+
+
+<Br>
+<U><B>Step 2: Eliminate the least significant variables and come up with an efficient and best model:</U></B><Br>
+Run the same model without the variable best_dir_win
+```{r}
+liner_model2<-lm(audience_score~genre+runtime+critics_score+best_pic_win+best_actor_win+best_actress_win,data=movie)
+summary(liner_model2)
+```
+
+<B>Observations:</B><Br>
+1. The adjusted R squared has increased slightly (from 0.5223 to 0.523)<Br>
+2. best_actor_win seems to be the least significant variable now.<Br>
+
+
+
+<Br>
+<U><B>Step 3: Eliminate the least significant variables and come up with an efficient and best model:</U></B><Br>
+Run the same model without the variable best_actor_win
+
+```{r}
+liner_model3<-lm(audience_score~genre+runtime+critics_score+best_pic_win+best_actress_win,data=movie)
+summary(liner_model3)
+```
+
+<B>Observations:</B><Br>
+1. The adjusted R squared has increased slightly (from 0.523 to 0.5234)<Br>
+2. best_actoress_win seems to be the least significant variable now.<Br>
+
+
+
+
+<Br>
+<U><B>Step 4: Eliminate the least significant variables and come up with an efficient and best model:</U></B><Br>
+Run the same model without the variable best_actoress_win
+```{r}
+liner_model4<-lm(audience_score~genre+runtime+critics_score+best_pic_win,data=movie)
+summary(liner_model4)
+```
+<B>Observations:</B><Br>
+1. The adjusted R squared has increased slightly (from 0.5234 to 0.5235)<Br>
+2. best_pic_win seems to be the least significant variable now.<Br>
+
+
+
+<Br>
+<U><B>Step 5: Eliminate the least significant variables and come up with an efficient and best model:</U></B><Br>
+Run the same model without the variable best_pic_win
+```{r}
+liner_model5<-lm(audience_score~genre+runtime+critics_score,data=movie)
+summary(liner_model5)
+```
+<B>Observations:</B><Br>
+1. The adjusted R squared remains the same (0.5235)<Br>
+2. No Other variable seems to be non significant.<Br>
+3. This may probably be the best fit linear model.<Br>
+4. We will further try to eliminate other variables.
+
+
+<Br>
+<U><B>Step 6: Try to eliminate more variables and observe the variation of R squared:</U></B><Br>
+Run the same model without the variable genre
+```{r}
+liner_model6<-lm(audience_score~runtime+critics_score,data=movie)
+summary(liner_model6)
+```
+
+<B>Observations:</B><Br>
+1. The adjusted R squared has decreased (from 0.5235 to 0.4979)<Br>
+2. This means this model is not better than the one we got in step 5.<Br>
+3. We will stop here and revert our model to step 5 i.e. liner_model5<-lm(audience_score~genre+runtime+critics_score,data=movies)
+
+
+<Br>
+<U><B>Step 7: Confirmation of the best fit linear model:</U></B><Br>
+Now we have deduced that the best fit linear model for us is liner_model5<-lm(audience_score~genre+runtime+critics_score,data=movies)<Br>
+With 3 independent variables (genre, runtime and critics_score), we will try to deduce the same result from the inbuilt mechanism in R.<Br>
+R provides a functionality inbuilt to try the backward elimination of variables automatically by taking out the variables one by one and compare the them with each other automatically so that we do not have to manually try and eliminate them one by one.<Br>
+We will make use of the step function.<Br>
+please follow below URL to know more about the step function in R:<Br>
+https://stat.ethz.ch/R-manual/R-devel/library/stats/html/step.html<Br>
+It basically tries the combination of independent variables in a linear model and comes up with the most efficient one.<Br>
+We will feed in the basic model (liner_model1<-lm(audience_score~genre+runtime+critics_score+best_pic_win+best_actor_win+best_actress_win+best_dir_win,data=movies)) into step function and observe its output.
+```{r}
+liner_model1<-lm(audience_score~genre+runtime+critics_score+best_pic_win+best_actor_win+best_actress_win+best_dir_win,data=movie)
+adjusted_model<-step(liner_model1, direction = "both", trace=FALSE ) 
+summary(adjusted_model)
+```
+
+<B>Observations:</B><Br>
+1. It is evident from the first 3 lines of the output that the most efficient model has only 3 independent variables (genre + runtime + critics_score) as we deduced in step 6 above.<Br>
+2. It has same R squared and P values as our model in step 5.<Br>
+3. The genre, runtime and the critics score variables are the most significant variables among the 3 variables.<Br>
+
+<B>Description of the most important model co-efficients:</B><Br>
+To interpret this model let us look at the estimate for each of the variables. <Br>
+1. The intercept in this case is meaningless, since it would mean that if there is no critics score, no runtime and no genre, the audience score would be 27.37145.<Br>
+2. We can interpret the runtime estimates as, given that all else held constant, the model predicts that an increase of 1 point in the runtime, would yield an increase of audience score by 0.07482 point.<Br>
+3. For the critics score, given that all else held constant, the model predicts that an increase of 1 point in the critics score, would yield an increase of audience rating by 0.45007 point. <Br>
+4. Since genre are a significant factor in the audience score, we would interpret each one. Under the conditions that all else held constant. <Br>
+a. Animated movies would score 5.94345 point more. <Br>
+b. Art House and International genre would score 5.74324 point more in audience score. <Br>
+c. Comedy would score 0.53569 point less audience score.<Br>
+d. Documentary would score of 9.45211 point more audience score. <Br>
+e. Drama would score of 1.68250 point more audience score. <Br>
+f. Horror would score 8.22215 point less audience score. <Br>
+g. Musical & Performing Arts would score 9.77902 point more audience score. <Br>
+h. Mystery and Suspense would score 4.38861 point less audience score. <Br>
+i. Other would score 1.79864 more point audience score.<Br>
+j. Science Fiction and Fantasy would score 6.54296 point less audience score.<Br>
+
+<Br>
+<U><B>Step 8: Model Diagnostics :</U></B><Br>
+<B>Residual and histogram plots :</B><Br>
+Now when we have found out the best linear model for us, we will further plot the residuals to get more understanding of the distribution of residulas around 0.<Br>
+We will use the adjusted_model calculated above in step 7.<Br>
+<B>Residual plot (residuals Vs runtime)</B>
+```{r}
+adjusted_model.res=resid(adjusted_model) 
+plot(movie$runtime,adjusted_model.res,xlab="Runtime",ylab="Residuals",main="a) Residuals vs. Runtime")
+abline(0,0)
+```
+
+<B>Observations:</B><Br>
+1. The distribution of residuals seems to be almost uniform around 0.<Br>
+2. There are some outliers above 20.<Br>
+
+<Br>
+
+
+<B>Residual plot (residuals Vs critics_score)</B>
+```{r}
+plot(adjusted_model$residuals~movie$critics_score,xlab="Critics score",ylab="Residuals",main="b) Residuals vs critics score")
+abline(0,0)
+```
+<Br><B>Observations:</B><Br>
+1. The distribution of residuals seems to be almost uniform around 0.<Br>
+2. There are some outliers above 20.<Br>
+
+
+<Br>
+
+
+<B>Residual plot (residuals Vs Genre)</B>
+
+```{r}
+plot(adjusted_model$residuals~movie$genre,col = c("pink"),xlab="genre",ylab="Residuals",main="b) Residuals vs Genre", las=1)
+abline(0,0)
+```
+<Br><B>Observations:</B><Br>
+1. The distribution of residuals for some genre seems to be uniform around 0.<Br>
+2. Outliers were observed for some genre (Action, Animation, Documentary etc).<Br>
+
+
+<Br>
+
+<B>Histogram plot of residuals for the adjusted model</B>
+```{r}
+hist(adjusted_model$residuals,labels = FALSE,col="grey",ylab="Residuals",main="a) Histogram of adjusted_model residuals")
+```
+<Br><B>Observations:</B><Br>
+The distribution of residuals seems to be a little skewed.<Br>
+
+
+* * *
+
+## Part 5: Prediction
+Now that we have deduced the best fit linear model, we will be predicting the popularity of a movie.<Br>
+We will take 2 movies from 2 different genres and observe how much they vary according to different genre.<Br>
+Also, the second movie is from 2016 as instructed by the page -> Peer-graded Assignment: Data Analysis Project.<Br>
+<Br><B>Movie 1: The Emoji Movie (2017)</B><Br>
+Rotten Tomato link: https://www.rottentomatoes.com/m/the_emoji_movie<Br>
+IMDB link: http://www.imdb.com/title/tt4877122/?ref_=adv_li_tt<Br>
+runtime: 86 min<Br>
+Genre: Animation <Br>
+critics_score: 8<Br>
+Actual audience_score:42<Br>
+Predicted audience_score: 43.35<Br>
+
+```{r}
+movie_1<-data.frame(genre="Animation",runtime=86,critics_score=8)
+#predict(adjusted_model,movie_1)
+predict(adjusted_model, movie_1, interval="predict", level = 0.95) 
+```
+<Br><B>Observations</B><Br>
+Our model predicts that the audience_score of a given movie with the critics score of 8, runtime as 86 and with the genre Animation is 43.35. It is actually really close to the real audience_score of 42 points.<Br>
+
+We also created a confidence interval for this. The model predicts with 95% confidence that for a given movie with a critic score of 8, runtime of 86 and with the genre Animation is expected to have an audience score between 14.38 to 72.32<Br>
+
+
+
+<Br>
+<B>Movie 2: Deadpool (2016)</B><Br>
+Rotten Tomato link: https://www.rottentomatoes.com/m/deadpool<Br>
+IMDB link: http://www.imdb.com/title/tt1431045/?ref_=nv_sr_2<Br>
+runtime: 108 min<Br>
+Genre: Action & Adventure <Br>
+critics_score: 84<Br>
+Actual audience_score:90<Br>
+Predicted audience_score: 73.3<Br>
+```{r}
+movie_2<-data.frame(genre="Action & Adventure",runtime=108,critics_score=84)
+#predict(adjusted_model,movie_2)
+predict(adjusted_model, movie_2, interval="predict", level = 0.95) 
+```
+<Br><B>Observations</B><Br>
+The model's prediction seems to be close of the actual score. The actual score is 90 while predicted score is 73.3.<Br>
+It shows that feeding in different genre into the model produces variation in the results prediction capabilities of the model.<Br>
+It can be interpreted as the model predicts with 95% confidence, an audience_score of 73.3 for a movie having runtime as 108, critics_score as 84 and belonging to the genre "Action & Adventure".<Br>
+The audience_score for this movie is expected to be in between 45.56059 and 100.9553.<Br>
+
+<Br>
+
+
+
+* * *
+
+## Part 6: Conclusion
+<U><B>Learnings and Challenges:</B></U><Br>
+While it is not easy to predict the audience score for a particular movie, The task gets even more difficult when we work on a fairly smaller dataset which may not generalize for all genre or for all population in general.
+<Br>
+
+<U><B>Conclusion:</B></U><Br>
+While it is evident that some of the internal factors like movie runtime, genre etc of a movie have some degree of correlation with the popularity of a movie, at the same time external attributes, like critics score , also seem to affect its popularity.  
+<Br>
+
+<U><B>Limitations of the current model:</B></U><Br>
+There are several limitations of the current approach. The most important ones maybe the fact that we only used a subset of the data (We used 8 variables out of 32). 
+A better model could be derived by using the whole set of variables or a combination of some of these. 
+
+
+<U><B>Future Scope:</B></U><Br>
+The current project can be enhanced by taking into some more fatures into considerations apart from IMDB and Rotten tomatoes. It can be extended to predict the popularity of a movie even before its release and its overall success on the Box Office. The critics rating plays a vital role in the popularity and hence their views is critical. The producers/financers can then predict the profitability of the movie project.
+
+
+* * *
